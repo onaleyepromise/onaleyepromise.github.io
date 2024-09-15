@@ -1,7 +1,7 @@
 import { dialogueData, scaleFactor } from "./constants.js";
 import { k } from "./kaboomCtx.js";
 import { displayDialogue, setCamScale } from "./utils.js";
-
+let keyFound = false;
 k.loadSprite("spritesheet", "./assets/spritesheet.png", {
     sliceX: 39,
     sliceY: 31,
@@ -11,7 +11,8 @@ k.loadSprite("spritesheet", "./assets/spritesheet.png", {
         "idle-side": 975,
         "walk-side": {from: 975, to: 978, loop: true, speed: 8},
         "idle-up": 1014,
-        "walk-up": {from: 1014, to: 1017, loop: true, speed: 8}
+        "walk-up": {from: 1014, to: 1017, loop: true, speed: 8},
+        "key": 99
     }
 });
 
@@ -44,11 +45,23 @@ k.scene("main", async () => {
         k.pos(),
         k.scale(scaleFactor),
         {
-            speed: 250,
+            speed: 150,
             direction: "down",
             isInDialogue: false,
         },
         "player"
+    ]);
+
+    const key = k.make([
+        k.sprite("spritesheet", {anim: "key"}),
+        k.area({
+            shape: new k.Rect(new k.Vec2(0, 3), 10, 10)
+        }),
+        k.body(),
+        k.anchor("center"),
+        k.pos(),
+        k.scale(scaleFactor),
+        "key"
     ]);
 
     for (const layer of layers){
@@ -67,10 +80,7 @@ k.scene("main", async () => {
                     player.onCollide(boundary.name, () => {
                         player.isInDialogue = true;
                         // TODO
-                        if(typeof dialogueData[boundary.name] == "function"){
-                            dialogueData[boundary.name]();
-                        }
-                        else displayDialogue(dialogueData[boundary.name], () => {player.isInDialogue = false});
+                        displayDialogue(dialogueData[boundary.name], () => {player.isInDialogue = false});
                     });
                 }
             }
@@ -86,10 +96,26 @@ k.scene("main", async () => {
                     );
                     k.add(player);
                     continue;
+                } 
+                if(entity.name === 'key'){
+                    key.pos = new k.Vec2(
+                        (map.pos.x + entity.x) * scaleFactor,
+                        (map.pos.y + entity.y) * scaleFactor
+                    );
+                    k.add(key);
+
+                    continue;
                 }
             }
         }
     }
+    player.onCollide("key", () => {
+        player.isInDialogue = true;
+        // TODO
+        displayDialogue(dialogueData["key"], () => {player.isInDialogue = false});
+        key.destroy()
+        keyFound = true;
+    })
 
     setCamScale(k);
 
