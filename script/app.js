@@ -80,6 +80,14 @@ k.scene("main", async () => {
                     player.onCollide(boundary.name, () => {
                         player.isInDialogue = true;
                         // TODO
+                        if(boundary.name === "game-premium"){
+                            if(keyFound) {
+                                displayDialogue(dialogueData[boundary.name], () => {player.isInDialogue = false})
+                            } else {
+                                player.isInDialogue = false;
+                                return;
+                            }
+                        }
                         displayDialogue(dialogueData[boundary.name], () => {player.isInDialogue = false});
                     });
                 }
