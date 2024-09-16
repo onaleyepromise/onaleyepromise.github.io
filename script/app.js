@@ -1,6 +1,8 @@
+
 import { dialogueData, scaleFactor } from "./constants.js";
 import { k } from "./kaboomCtx.js";
 import { displayDialogue, setCamScale } from "./utils.js";
+let keyFound = false;
 
 k.loadSprite("spritesheet", "./assets/spritesheet.png", {
     sliceX: 39,
@@ -15,7 +17,6 @@ k.loadSprite("spritesheet", "./assets/spritesheet.png", {
         "key": 99
     }
 });
-
 
 k.loadSprite("map", "./assets/portfolio.png");
 
@@ -33,10 +34,8 @@ k.scene("main", async () => {
     const map = k.add([
         k.sprite("map"),
         k.pos(0),
-        k.scale(scaleFactor),
-    ], {
-        id: "Hello"
-    });
+        k.scale(scaleFactor)
+    ]);
 
     const player = k.make([
         k.sprite("spritesheet", {anim: "idle-down"}),
@@ -48,15 +47,25 @@ k.scene("main", async () => {
         k.pos(),
         k.scale(scaleFactor),
         {
-            speed: 250,
+            speed: 200,
             direction: "down",
             isInDialogue: false,
         },
         "player"
     ]);
+
     const key = k.make([
-        k.sprite("spritesheet", {anim: "key"})
-    ])
+        k.sprite("spritesheet", {anim: "key"}),
+        k.area({
+            shape: new k.Rect(new k.Vec2(0, 3), 10, 10)
+        }),
+        k.body(),
+        k.anchor("center"),
+        k.pos(),
+        k.scale(scaleFactor),
+        "key"
+    ]);
+
     for (const layer of layers){
         if(layer.name === "blocks"){
             for(const boundary of layer.objects){
@@ -66,37 +75,22 @@ k.scene("main", async () => {
                     }),
                     k.body({ isStatic: true }),
                     k.pos(boundary.x, boundary.y),
-                    boundary.name,
+                    boundary.name
                 ]);
 
                 if(boundary.name){
-                    player.onCollide(boundary.name, (body, a) => {
-                        body.destroy(boundary.name)
+                    player.onCollide(boundary.name, () => {
                         player.isInDialogue = true;
-                        body.remove(a.target)
-                        map.remove(a.target.id);
-                        a.target.destroy();
-                        console.log(a)
-
-                        if(boundary.name == "game-premium") {
-                            if(key == true){
-                                startGame();
+                        // TODO
+                        if(boundary.name === "game-premium"){
+                            if(keyFound) {
+                                displayDialogue(dialogueData[boundary.name], () => {player.isInDialogue = false; }, "0")
                             } else {
-                                displayDialogue(dialogueData[boundary.name], () => player.isInDialogue = false);
+                                player.isInDialogue = false;
                                 return;
                             }
                         }
-                        else if (boundary.name == "key") {
-
-                                if(key == true){
-                                    displayDialogue(dialogueData[boundary.name], () => player.isInDialogue = false);
-                                    console.log(boundary.name);
-                                    map.unuse(boundary.name);
-                                    map.remove(map.children[boundary.name])
-                                    console.log(map)
-                                }
-                            }
-                        else displayDialogue(dialogueData[boundary.name], () => {player.isInDialogue = false});
+                        displayDialogue(dialogueData[boundary.name], () => {player.isInDialogue = false}, "5");
                     });
                 }
             }
@@ -112,10 +106,26 @@ k.scene("main", async () => {
                     );
                     k.add(player);
                     continue;
+                } 
+                if(entity.name === 'key'){
+                    key.pos = new k.Vec2(
+                        (map.pos.x + entity.x) * scaleFactor,
+                        (map.pos.y + entity.y) * scaleFactor
+                    );
+                    k.add(key);
+
+                    continue;
                 }
             }
         }
     }
+    player.onCollide("key", () => {
+        player.isInDialogue = true;
+        // TODO
+        displayDialogue(dialogueData["key"], () => {player.isInDialogue = false}, 5);
+        key.destroy()
+        keyFound = true;
+    })
 
     setCamScale(k);
 
@@ -182,6 +192,4 @@ k.scene("main", async () => {
 
 k.go("main");
 
-function startGame(){
 
-}

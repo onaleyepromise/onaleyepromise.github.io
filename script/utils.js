@@ -1,5 +1,4 @@
-export function displayDialogue(text, onDisplayEnd){
-    console.log("Works")
+export function displayDialogue(text, onDisplayEnd, ttype){
     const dialogueUI  = document.getElementById("text-container");
     const dialogue = document.getElementById("dialogue");
 
@@ -14,8 +13,11 @@ export function displayDialogue(text, onDisplayEnd){
             index++;
             return;
         }
+        if(ttype !== 5){
+            document.getElementById("gPBtn").addEventListener("click", gP)
+        }
         clearInterval(intervalRef);
-    }, 10);
+    }, 6);
 
     const closeBtn = document.getElementById("close");
 
@@ -38,4 +40,13 @@ export function setCamScale(k){
         return;
     }
     k.camScale(new k.Vec2(1.5));
+}
+
+// ***********************
+// ***********************
+// ***********************
+function gP(){
+    const premiumGame = document.getElementById("game_premium");
+    premiumGame.style.display = "block";
+    premiumGame.style.zIndex = 20002;
 }
