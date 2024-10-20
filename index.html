@@ -23,7 +23,7 @@
             font-size: 2rem;
         }
 
-        #game_premium{
+        #game_premium, #mini-game1{
             position: absolute;
             width: 100%;
             height: 100%;
@@ -91,6 +91,9 @@
         img{
             display: none;
         }
+        #back{
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -111,7 +114,9 @@
         <img src="./assets/playerbrown.png" alt="" id="brownP">
         <img src="./assets/ship.png" alt="" id="ship">
         <canvas id="game"></canvas>
+        <button id="back">Back</button>
         <iframe src="./game-premium.html" id="game_premium"></iframe>
+        <iframe src="./mini-game1.html" id="mini-game1"></iframe>
     </div>
     <script type="module" src="./script/app.js"></script>
 </body>

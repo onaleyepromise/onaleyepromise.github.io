@@ -47,7 +47,7 @@ k.scene("main", async () => {
         k.pos(),
         k.scale(scaleFactor),
         {
-            speed: 200,
+            speed: 250,
             direction: "down",
             isInDialogue: false,
         },
@@ -84,13 +84,17 @@ k.scene("main", async () => {
                         // TODO
                         if(boundary.name === "game-premium"){
                             if(keyFound) {
-                                displayDialogue(dialogueData[boundary.name], () => {player.isInDialogue = false; }, "0")
+                                displayDialogue(dialogueData[boundary.name], () => {player.isInDialogue = false; }, 5)
+                                return;
                             } else {
                                 player.isInDialogue = false;
                                 return;
                             }
                         }
-                        displayDialogue(dialogueData[boundary.name], () => {player.isInDialogue = false}, "5");
+                        if(boundary.name === "mini-game1"){
+                            displayDialogue(dialogueData[boundary.name], () => {player.isInDialogue = false; }, 6)
+                        }
+                        displayDialogue(dialogueData[boundary.name], () => {player.isInDialogue = false}, 0);
                     });
                 }
             }

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Responsive Canvas</title>
+    <style>
+        body {
+            position: absolute;
+            width: 100vw;
+            height: 100vh;
+            top: 0;
+            left: 0;
+            text-align: center;
+            display: flex;
+            background-color: transparent;
+            margin: 0;
+        }
+
+        #canvas {
+            z-index: 100;
+            background-color: transparent;
+            top: 0;
+            left: 0;
+            width: 100%;
+            object-fit: contain;
+            background-color: aqua;
+        }
+
+    </style>
+</head>
+<body>
+    <button onclick="play()">Play</button>
+    <canvas id="canvas"></canvas>
+    <script>
+        function play(){
+            document.querySelector("button").style.display = "none";
+            animate(0)
+        }
+        const canvas = document.getElementById('canvas');
+        canvas.width = CANVAS_WIDTH = 800;
+        canvas.height = CANVAS_HEIGHT = 600;
+        const ctx = canvas.getContext('2d');
+        class Player{
+            constructor(x, y, width, height){
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+            }
+            update(){
+
+            }
+            draw(){
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+            }
+        }
+
+        class Enemy{
+            constructor(x, y, width, height){
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+            }
+            update(){
+                this.x--;
+            }
+            draw(){
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+            }
+        }
+
+        const player = new Player(0, 0, 64, 64);
+        const enemy = new Enemy(0, 0, 64, 64);
+    </script>
+</body>
+</html>

@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
     <style>
+        *{
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            background-color: transparent;
+        }
         #gameBoard{
             position: absolute;
             width: 100%;
@@ -13,6 +18,7 @@
             left: 0;
             text-align: center;
             display: flex;
+            background-color: transparent;
         }
         #gameStart{
             position: absolute;
@@ -23,33 +29,60 @@
         canvas{
             position: absolute;
             z-index: 100;
-            background-color: #232333;
+            background-color: transparent;
             top: 50%;
             left: 50%;
             height: 100%;
             translate: -50% -50%;
             object-fit: contain;
         }
+        img{
+            display: none;
+            color: gold;
+        }
+        audio{
+            display: none;
+        }
     </style>
 </head>
 <body>
     <div id="gameBoard">
+        <img src="./assets/ship.png" id="shipImage">
+        <img src="./assets/playerbrown.png" id="aBrown">
+        <img src="./assets/playerred.png" id="aRed">
+        <img src="./assets/playerwhite.png" id="aWhite">
+        <audio src="./assets/assets_hit.wav" id="hit"></audio>
+        <audio src="./assets/assets_shoot.wav" id="shoot"></audio>
         <div id="gameStart">
             <h2>Play Game</h2>
+            <p>Highscore: <span id='highscore'>0</span></p>
             <button onclick="start()">Start</button>
         </div>
     </div>
     <script>
         function start(){
+            console.log("Works!")
             const canvas = document.createElement("canvas");
-            canvas.width = 512;
-            canvas.height = 512;
+            canvas.width = 256;
+            canvas.height = 256;
             document.getElementById("gameStart").style.display = "none";
             document.body.appendChild(canvas);
             init(canvas);
         }
+        let highScore = 0;
         function init(canvas){
             const ctx = canvas.getContext("2d"), cWidth = canvas.width, cHeight = canvas.height;
+            ctx.imageSmoothingEnabled = false;
+
+            const shoot = document.getElementById("shoot");
+            shoot.volume = 0.2;
+            const hit = document.getElementById("hit");
+            hit.volume = 0.2;
+
+            const shipImage = document.getElementById("shipImage");
+            const alienRed = document.getElementById("aRed");
+            const alienWhite = document.getElementById("aWhite");
+            const alienBrown = document.getElementById("aBrown");
 
             class Ship{
                 constructor(x, y, width, height){
@@ -57,20 +90,128 @@
                     this.y = y;
                     this.width = width;
                     this.height = height;
-                    this.vX = 1;
+                    this.vX = 2;
+                    this.image = shipImage;
+                    this.coolDown = 5;
+                    this.health = 100;
                 }
-                update(){
+                update(deltaTime){
                     if(input.keys.includes("ArrowLeft")){
-                        this.x -= this.vX;
+                        this.x -= this.vX * deltaTime * 0.1;
                     } else if (input.keys.includes("ArrowRight")){
-                        this.x += this.vX;
+                        this.x += this.vX * deltaTime * 0.2;
+                    }
+
+                    this.coolDown = Math.max(0, (this.coolDown - deltaTime * 0.05));
+                    if(this.coolDown == 0){
+                        if(input.keys.includes("Space")){
+                            this.coolDown = 10;
+                            missiles.push(new Missle(this.x + this.width * 0.5, this.y));
+                            shoot.currentTime = 0;
+                            shoot.play();
+                        }
+                    }
+                    this.x =Math.max(0, Math.min(this.x, cWidth - this.width))
+                }
+                draw(){
+                    ctx.fillStyle = "red";
+                    ctx.drawImage(this.image, this.x, this.y, this.width, this.height);
+                }
+            }
+
+            class Alien{
+                constructor(x, y, spriteWidth, spriteHeight){
+                    this.x = x;
+                    this.y = y;
+                    this.frameWidth = spriteWidth;
+                    this.frameHeight = spriteHeight;
+                    this.width = this.frameWidth;
+                    this.height = this.frameHeight;
+                    this.image = alienWhite;
+                    this.timeForNextShoot = 20;
+                    this.timeToShoot = 0;
+                    this.health = 10;
+                    this.damageHit = 1;
+                    this.dx = 1;
+                    this.frameX = 0;
+                    this.markedForDeletion = false;
+                    this.timeForNextFrame = 0;
+                    this.timeOfNextFrame = 10;
+                    this.color = `blue`;
+                }
+                update(deltaTime){
+                    this.x-=this.dx;
+                    if(this.timeToShoot >= this.timeForNextShoot){
+                        this.shoot();
+                        this.timeToShoot = 0;
+                    } else {
+                        this.timeToShoot += deltaTime * 0.01;
+                    }
+                    if(this.x < 0 || this.x + this.frameWidth > cWidth) {
+                        this.y+=20;
+                        this.dx = -this.dx; 
+                    }
+
+                    if(this.timeForNextFrame >= this.timeOfNextFrame){
+                        if(this.frameX >= 1){
+                            this.frameX = 0;
+                        } else {
+                            this.frameX++;
+                        }
+                        this.timeForNextFrame = 0;
+                    } else {
+                        this.timeForNextFrame+=deltaTime * 0.04;
+                    }
+                    
+                    if(this.health < 0){
+                        this.health = 0;
+                        hit.currentTime = 0;
+                        ui.score += 500
+                        hit.play();
+                        this.markedForDeletion = true;
                     }
                 }
                 draw(){
                     ctx.fillStyle = "red";
-                    ctx.fillRect(this.x, this.y, this.width, this.height);
+                    ctx.fillRect(this.x, this.y - 6, this.frameWidth, 4);
+                    ctx.fillStyle = this.color;
+                    ctx.fillRect(this.x, this.y - 6, (this.health / 10) * this.frameWidth, 4)
+                    ctx.drawImage(this.image, this.frameX * this.frameWidth, 0 * this.frameHeight, this.frameWidth, this.frameHeight, this.x, this.y, this.frameWidth, this.frameHeight);
+                }
+                shoot(){
+                    enemyMissile.push(new EnemyMissile(this.x + this.width * 0.5, this.y + this.height));
                 }
             }
+            class RedAlien extends Alien{
+                constructor(x, y, width, height){
+                    super(x, y, width, height);
+                    this.image = alienRed;
+                    this.damageHit = 0.5;
+                    this.color = "pink";
+                }
+                update(deltaTime){
+                    super.update(deltaTime);
+                }
+                draw(){
+                    super.draw();
+                }
+            }
+
+            class BrownAlien extends Alien{
+                constructor(x, y, width, height){
+                    super(x, y, width, height);
+                    this.image = alienBrown;
+                    this.damageHit = 0.2;
+                    this.color = "violet";
+                }
+                update(deltaTime){
+                    super.update(deltaTime);
+                }
+                draw(){
+                    super.draw();
+                }
+            }
+
             class Input{
                 constructor(){
                     this.keys = [];
@@ -86,22 +227,198 @@
                     this.keys.push(e.code);
                 }
                 keyup(e){
-                    if(this.keys.includes(e.code))
-                    this.keys.slice(this.keys.indexOf(e.code), 1);
+                    this.keys.splice(this.keys.indexOf(e.code), 1);
                 }
             }
+
+            class Missle{
+                constructor(x, y){
+                    this.x = x;
+                    this.y = y;
+                    this.width = 2;
+                    this.height = 6;
+                    this.markedForDeletion = false;
+                }
+                update(deltaTime){
+                    this.y -= (deltaTime * 0.05) * 4;
+                    if(this.y < 0) this.markedForDeletion = true;
+                }
+                draw(){
+                    ctx.fillStyle = 'red';
+                    ctx.fillRect(this.x, this.y, this.width, this.height);
+                }
+            }
+
+            class EnemyMissile extends Missle{
+                constructor(x, y){
+                    super(x, y);
+                }
+                update(deltaTime){
+                    this.y += (deltaTime * 0.05) * 4;
+                    if(this.y > cHeight) this.markedForDeletion = true;
+                }
+                draw(){
+                    super.draw();
+                }
+            }
+
+            class UI{
+                constructor(){
+                    this.health = 100;
+                    this.fullHealth = 100;
+                    this.score = 0;
+                }
+                update(){
+                    if(this.health <= 0) {
+                        document.body.removeChild(canvas);
+                        if(highScore < ui.score) highScore = ui.score;
+                        highscore.textContent = highScore;
+                        gameOver();
+                    }
+                }
+                draw(){
+                    ctx.beginPath();
+                    ctx.fillStyle = "rgba(255, 215, 0, 0.8)";
+                    ctx.arc(0, 0, 32, 0, Math.PI / 2, true);
+                    ctx.fill()
+                    ctx.closePath();
+                    ctx.fillStyle = "gold";
+                    ctx.font = "12pt Comic Sans MS"
+                    ctx.fillText("Score: " + this.score, 12, 24);
+                    ctx.fillStyle = "goldenrod";
+                    ctx.fillRect(12, 30, this.fullHealth * 0.8, 10);
+                    ctx.fillStyle = "red";
+                    ctx.fillRect(12, 30, this.health * 0.8, 10);
+                }
+            }
+
+            class Particles{
+                constructor(x, y){
+                    this.x = x;
+                    this.y = y;
+                    this.width = Math.floor(Math.random() * 4) + 2;
+                    this.height = Math.floor(Math.random() * 4) + 2;
+                    this.vx = Math.random() < 0.5? 1 * Math.random():-1 * Math.random();
+                    this.vy = Math.random() < 0.5? 1 * Math.random():2 * Math.random();
+                    this.color = {r: Math.floor(Math.random() * 255), g:  Math.floor(Math.random() * 255), b: Math.floor(Math.random() * 255), a: 1};
+                    this.markedForDeletion = false;
+                }
+                update(deltaTime){
+                    this.x += this.vx * deltaTime * 0.02;
+                    this.y += this.vy * deltaTime * 0.02;
+                    if(this.width > 0.1) this.width -= 0.1 * deltaTime * 0.01;
+                    if(this.height > 0.1) this.height -= 0.1 * deltaTime * 0.01;
+                    if(this.color.a > 0.1) this.color.a -= 0.01;
+                    else this.markedForDeletion = true;
+                }
+                draw(){
+                    ctx.beginPath();
+                    ctx.fillStyle = `rgba(${this.color.r}, ${this.color.g}, ${this.color.b}, ${this.color.a})`;
+                    ctx.arc(this.x, this.y, this.width * this.height * 0.1, 0, Math.PI * 2, false);
+                    ctx.rect(this.x, this.y, this.width * this.height * 0.1, this.width * this.height * 0.1)
+                    ctx.fill();
+                    ctx.closePath();
+                }
+            }
+            let missiles = [];
+            let enemyMissile = [];
+            let particles = [];
+
             const input = new Input();
-            const ship = new Ship(0, 0, 32, 32);
+            const ship = new Ship(cWidth * 0.5 - 16, cHeight - 32, 16, 16, 32,32);
             let lastTime = 0;
+            const ui = new UI()
+            let alienArray = [new Alien(30, 30, 16, 16)];
+            let timeForNextAlien = 150;
+            let timeNFAlien = 0;
 
             function animate(timeStamp){
-                let deltaTime =  timeStamp - lastTime;
-                lastTime = timeStamp;
-                ship.update();
-                ship.draw();
+                if(ui.health <= 0) return;
+                else {
+                    ctx.fillStyle = "black"
+                    let deltaTime =  timeStamp - lastTime;
+                    lastTime = timeStamp;
+                    ctx.fillRect(0, 0, cWidth, cHeight);
+                    missiles = missiles.filter((missile) => !missile.markedForDeletion);
+                    enemyMissile = enemyMissile.filter((missile) => !missile.markedForDeletion);
+                    alienArray = alienArray.filter((alien) => !alien.markedForDeletion);
+                    particles = particles.filter((particle) => !particle.markedForDeletion);
+                    ship.update(deltaTime);
+                    ship.draw();
+                    alienArray.forEach(alien => {
+                        alien.update(deltaTime);
+                        alien.draw();
+                    })
+
+                    //Launch missile and check for collision. 
+                    if(missiles.length > 0){
+                        missiles.forEach(missile => {
+                            missile.update(deltaTime);
+                            missile.draw();
+                            alienArray.forEach(alien => {
+                                if(checkCollision(alien, missile)){
+                                    missile.markedForDeletion = true;
+                                    alien.health -= alien.damageHit * 4;
+                                    ui.score += 100;
+                                    for(i = 0; i < 20; i++){
+                                    particles.push(new Particles(alien.x + alien.width * 0.5, alien.y + alien.height));
+                                    }
+                                };
+                            })
+                        })
+                    }
+                    //Enemy missile and check for collision. 
+                    if(enemyMissile.length > 0){
+                        enemyMissile.forEach(enemyMissile => {
+                            enemyMissile.update(deltaTime);
+                            enemyMissile.draw();
+                            if(checkCollision(ship, enemyMissile)){
+                                enemyMissile.markedForDeletion = true;
+                                ship.health -= 10;
+                                ui.health = ship.health;
+                            };
+                        })
+                    }
+                    if(particles.length > 0){
+                        particles.forEach(particle => {
+                            particle.update(deltaTime);
+                            particle.draw();
+                        })
+                    }
+                    if(timeNFAlien >= timeForNextAlien){
+                        let alien;
+                        let diceRoll = Math.floor(Math.random() * 3);
+                        const x = Math.max(0, Math.min(Math.floor(Math.random() * cWidth), cWidth - 16));
+                        if(diceRoll == 0){
+                            alien = new Alien(x, 0, 16, 16);
+                        } else if(diceRoll == 1){
+                            alien = new BrownAlien(x, 0, 16, 16);
+                        } else if(diceRoll == 2){
+                            alien = new RedAlien(x, 0, 16, 16);
+                        }
+                        alienArray.push(alien);
+                        if(timeForNextAlien > 40) timeForNextAlien -= 4;
+                        timeNFAlien = 0;
+                    } else {
+                        timeNFAlien += deltaTime * 0.02;
+                    }
+                    ui.update();
+                    ui.draw()
+                }
                 requestAnimationFrame(animate);
             }
             animate(0);
+
+            function checkCollision(a, b){
+                return a.x < b.x + b.width &&
+                a.x + a.width > b.x &&
+                a.y < b.y + b.height &&
+                a.height + a.y > b.y
+            }
+
+            function gameOver(){
+                document.getElementById("gameStart").style.display = "block";
+            }
         }
     </script>
 </body>
